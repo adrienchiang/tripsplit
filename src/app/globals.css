@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground: #e8edf5;
+  --background: #0a1a45;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply bg-charcoal-950 text-charcoal-100 antialiased;
+    font-family: Inter, system-ui, sans-serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-charcoal-900;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-charcoal-600 rounded-full;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-charcoal-900 border border-charcoal-700 rounded-xl;
+  }
+
+  .card-dark {
+    @apply bg-charcoal-950 border border-charcoal-800 rounded-xl;
+  }
+
+  .btn-primary {
+    @apply bg-navy-600 hover:bg-navy-500 text-white font-medium rounded-xl px-4 py-3 transition-colors active:scale-95;
+  }
+
+  .btn-secondary {
+    @apply bg-charcoal-800 hover:bg-charcoal-700 text-charcoal-100 font-medium rounded-xl px-4 py-3 transition-colors active:scale-95;
+  }
+
+  .btn-ghost {
+    @apply hover:bg-charcoal-800 text-charcoal-300 font-medium rounded-xl px-4 py-2 transition-colors;
+  }
+
+  .input-field {
+    @apply bg-charcoal-800 border border-charcoal-600 text-charcoal-100 rounded-xl px-4 py-3 w-full
+           focus:outline-none focus:border-navy-400 focus:ring-1 focus:ring-navy-400 transition-colors
+           placeholder:text-charcoal-500;
+  }
+
+  .section-title {
+    @apply text-xs font-semibold text-charcoal-400 uppercase tracking-widest;
+  }
+
+  .bottom-nav {
+    @apply fixed bottom-0 left-0 right-0 bg-charcoal-950 border-t border-charcoal-800
+           flex items-center justify-around px-2 py-2 z-50;
+  }
+
+  .page-container {
+    @apply min-h-screen pb-24 px-4 pt-4 max-w-md mx-auto;
+  }
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.2s ease-out;
+}
+
+/* Safe area for mobile */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
