@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import './globals.css';
+import { DataProvider } from '@/components/DataProvider';
 
 export const metadata: Metadata = {
   title: 'TripSplit 旅費分賬',
@@ -17,7 +18,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-HK" className="dark">
-      <body className="bg-charcoal-950 text-charcoal-100">{children}</body>
+      <body className="bg-charcoal-950 text-charcoal-100">
+        <DataProvider>{children}</DataProvider>
+      </body>
     </html>
   );
 }
