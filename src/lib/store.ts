@@ -85,9 +85,16 @@ export const useTripStore = create<TripStore>()((set, get) => ({
             if (tripId) get().reloadTrip(tripId);
           })
         .on('postgres_changes', { event: '*', schema: 'public', table: 'trips' },
-          async () => {
-            const trips = await db.fetchAllTrips();
-            set({ trips });
+          async (payload: any) => {
+            if (payload.eventType === 'INSERT') {
+              // Wait for member inserts (done right after trip insert) to complete
+              await new Promise(r => setTimeout(r, 1500));
+              const tripId = payload.new?.id;
+              if (tripId) get().reloadTrip(tripId);
+            } else {
+              const trips = await db.fetchAllTrips();
+              set({ trips });
+            }
           })
         .subscribe();
     } catch (err) {
@@ -112,7 +119,9 @@ export const useTripStore = create<TripStore>()((set, get) => ({
     const id = uuidv4();
     const trip: Trip = { ...data, id, expenses: [], settlements: [], createdAt: new Date().toISOString() };
     set((s) => ({ trips: [...s.trips, trip], currentTripId: id }));
-    db.createTripInDB(trip).catch(console.error);
+    db.createTripInDB(trip)
+      .then(() => get().reloadTrip(id))
+      .catch(console.error);
     return id;
   },
 
