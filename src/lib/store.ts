@@ -180,10 +180,15 @@ export const useTripStore = create<TripStore>()((set, get) => ({
         t.id === tripId ? { ...t, members: [...t.members, newMember] } : t
       ),
     }));
-    db.addMemberInDB(tripId, newMember).catch((err) => {
-      console.error('addMember DB error:', err);
-      alert('儲存成員失敗: ' + (err?.message ?? err));
-    });
+    db.addMemberInDB(tripId, newMember)
+      .then(async () => {
+        const trip = await db.fetchTrip(tripId);
+        alert(`DB已儲存！資料庫現有成員數: ${trip?.members.length ?? 0} 人`);
+      })
+      .catch((err) => {
+        console.error('addMember DB error:', err);
+        alert('儲存成員失敗: ' + (err?.message ?? err));
+      });
   },
 
   removeMember: (tripId, memberId) => {
