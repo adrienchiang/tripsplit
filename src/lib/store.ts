@@ -179,14 +179,17 @@ export const useTripStore = create<TripStore>()((set, get) => ({
         t.id === tripId ? { ...t, members: [...t.members, newMember] } : t
       ),
     }));
+    db.addMemberInDB(tripId, newMember).catch(console.error);
   },
 
-  removeMember: (tripId, memberId) =>
+  removeMember: (tripId, memberId) => {
     set((s) => ({
       trips: s.trips.map((t) =>
         t.id === tripId ? { ...t, members: t.members.filter((m) => m.id !== memberId) } : t
       ),
-    })),
+    }));
+    db.removeMemberInDB(memberId).catch(console.error);
+  },
 
   // ── Currency actions ─────────────────────────────────────────────
 

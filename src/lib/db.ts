@@ -144,6 +144,24 @@ export async function deleteTripInDB(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// ── Member CRUD ──────────────────────────────────────────────────
+
+export async function addMemberInDB(tripId: string, member: Member): Promise<void> {
+  const { error } = await supabase.from('members').insert({
+    id: member.id,
+    trip_id: tripId,
+    name: member.name,
+    initials: member.initials,
+    color: member.color,
+  });
+  if (error) throw error;
+}
+
+export async function removeMemberInDB(memberId: string): Promise<void> {
+  const { error } = await supabase.from('members').delete().eq('id', memberId);
+  if (error) throw error;
+}
+
 // ── Expense CRUD ─────────────────────────────────────────────────
 
 export async function addExpenseInDB(expense: Expense): Promise<void> {
