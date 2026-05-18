@@ -1,4 +1,4 @@
-import { Trip, MEMBER_COLORS } from './types';
+import { Trip, MEMBER_COLORS, ExpenseCategory } from './types';
 import { getInitials } from './utils';
 import { buildSplits } from './calculations';
 
@@ -33,7 +33,7 @@ function makeExpense(
   currency: 'THB' | 'HKD',
   paidById: string,
   date: string,
-  category: string,
+  category: ExpenseCategory,
   participantIds: string[],
   notes = ''
 ) {
