@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Plus, X, MapPin, Calendar, Globe, Users } from 'lucide-react';
 import { useTripStore } from '@/lib/store';
 import { PageHeader } from '@/components/ui/PageHeader';
+import { v4 as uuidv4 } from 'uuid';
 import { CurrencyCode, CURRENCY_LABELS, MEMBER_COLORS } from '@/lib/types';
 import { getInitials } from '@/lib/utils';
 import { DEFAULT_EXCHANGE_RATES } from '@/lib/mockData';
@@ -32,7 +33,7 @@ export default function CreateTripPage() {
     setMembers((prev) => [
       ...prev,
       {
-        id: `m_${Date.now()}`,
+        id: uuidv4(),
         name: trimmed,
         initials: getInitials(trimmed),
         color: MEMBER_COLORS[prev.length % MEMBER_COLORS.length],
