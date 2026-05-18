@@ -180,7 +180,10 @@ export const useTripStore = create<TripStore>()((set, get) => ({
         t.id === tripId ? { ...t, members: [...t.members, newMember] } : t
       ),
     }));
-    db.addMemberInDB(tripId, newMember).catch(console.error);
+    db.addMemberInDB(tripId, newMember).catch((err) => {
+      console.error('addMember DB error:', err);
+      alert('儲存成員失敗: ' + (err?.message ?? err));
+    });
   },
 
   removeMember: (tripId, memberId) => {
@@ -189,7 +192,10 @@ export const useTripStore = create<TripStore>()((set, get) => ({
         t.id === tripId ? { ...t, members: t.members.filter((m) => m.id !== memberId) } : t
       ),
     }));
-    db.removeMemberInDB(memberId).catch(console.error);
+    db.removeMemberInDB(memberId).catch((err) => {
+      console.error('removeMember DB error:', err);
+      alert('刪除成員失敗: ' + (err?.message ?? err));
+    });
   },
 
   // ── Currency actions ─────────────────────────────────────────────
