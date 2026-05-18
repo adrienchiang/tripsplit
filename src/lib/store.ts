@@ -180,15 +180,7 @@ export const useTripStore = create<TripStore>()((set, get) => ({
         t.id === tripId ? { ...t, members: [...t.members, newMember] } : t
       ),
     }));
-    db.addMemberInDB(tripId, newMember)
-      .then(async () => {
-        const trip = await db.fetchTrip(tripId);
-        alert(`DB已儲存！資料庫現有成員數: ${trip?.members.length ?? 0} 人`);
-      })
-      .catch((err) => {
-        console.error('addMember DB error:', err);
-        alert('儲存成員失敗: ' + (err?.message ?? err));
-      });
+    db.addMemberInDB(tripId, newMember).catch(console.error);
   },
 
   removeMember: (tripId, memberId) => {
@@ -197,10 +189,7 @@ export const useTripStore = create<TripStore>()((set, get) => ({
         t.id === tripId ? { ...t, members: t.members.filter((m) => m.id !== memberId) } : t
       ),
     }));
-    db.removeMemberInDB(memberId).catch((err) => {
-      console.error('removeMember DB error:', err);
-      alert('刪除成員失敗: ' + (err?.message ?? err));
-    });
+    db.removeMemberInDB(memberId).catch(console.error);
   },
 
   // ── Currency actions ─────────────────────────────────────────────
