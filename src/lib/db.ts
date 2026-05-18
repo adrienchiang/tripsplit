@@ -195,6 +195,41 @@ export async function addExpenseInDB(expense: Expense): Promise<void> {
   }
 }
 
+export async function updateExpenseInDB(expenseId: string, data: Partial<Expense>): Promise<void> {
+  const updates: Record<string, unknown> = {};
+  if (data.name !== undefined) updates.name = data.name;
+  if (data.originalAmount !== undefined) updates.original_amount = data.originalAmount;
+  if (data.originalCurrency !== undefined) updates.original_currency = data.originalCurrency;
+  if (data.exchangeRate !== undefined) updates.exchange_rate = data.exchangeRate;
+  if (data.settlementAmount !== undefined) updates.settlement_amount = data.settlementAmount;
+  if (data.paidBy !== undefined) updates.paid_by = data.paidBy;
+  if (data.date !== undefined) updates.date = data.date;
+  if (data.category !== undefined) updates.category = data.category;
+  if (data.participants !== undefined) updates.participants = data.participants;
+  if (data.splitMode !== undefined) updates.split_mode = data.splitMode;
+  if (data.notes !== undefined) updates.notes = data.notes;
+
+  if (Object.keys(updates).length > 0) {
+    const { error } = await supabase.from('expenses').update(updates).eq('id', expenseId);
+    if (error) throw error;
+  }
+
+  if (data.splits !== undefined) {
+    await supabase.from('expense_splits').delete().eq('expense_id', expenseId);
+    if (data.splits.length > 0) {
+      const { error: sErr } = await supabase.from('expense_splits').insert(
+        data.splits.map((s) => ({
+          expense_id: expenseId,
+          member_id: s.memberId,
+          amount: s.amount,
+          percentage: s.percentage ?? null,
+        }))
+      );
+      if (sErr) throw sErr;
+    }
+  }
+}
+
 export async function deleteExpenseInDB(expenseId: string): Promise<void> {
   const { error } = await supabase.from('expenses').delete().eq('id', expenseId);
   if (error) throw error;

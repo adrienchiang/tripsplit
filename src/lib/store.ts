@@ -152,6 +152,7 @@ export const useTripStore = create<TripStore>()((set, get) => ({
           : t
       ),
     }));
+    db.updateExpenseInDB(expenseId, data).catch(console.error);
     get().refreshSettlements(tripId);
   },
 
