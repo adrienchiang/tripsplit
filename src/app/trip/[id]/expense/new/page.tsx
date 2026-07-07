@@ -22,7 +22,7 @@ export default function NewExpensePage() {
   const [name, setName] = useState('');
   const [originalAmount, setOriginalAmount] = useState('');
   const [currency, setCurrency] = useState<CurrencyCode>('THB');
-  const [exchangeRate, setExchangeRate] = useState(0.228);
+  const [exchangeRate, setExchangeRate] = useState(0.236);
   const [paidBy, setPaidBy] = useState('');
   const [date, setDate] = useState(getTodayISO());
   const [category, setCategory] = useState<ExpenseCategory>('food');
