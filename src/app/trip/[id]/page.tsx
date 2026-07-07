@@ -35,8 +35,7 @@ export default function TripDashboard() {
   const topCreditor = balances.reduce((a, b) => (a.netBalance > b.netBalance ? a : b), balances[0]);
 
   const recentExpenses = [...trip.expenses]
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, 5);
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   const topCategory = Object.entries(byCategory).reduce(
     (a, b) => (a[1] > b[1] ? a : b),
@@ -177,7 +176,7 @@ export default function TripDashboard() {
       {/* Recent expenses */}
       <div className="card p-4 mb-5">
         <div className="flex items-center justify-between mb-3">
-          <p className="section-title">最近支出</p>
+          <p className="section-title">所有支出</p>
           <span className="text-xs text-charcoal-500">{trip.expenses.length} 筆</span>
         </div>
         {recentExpenses.length === 0 ? (

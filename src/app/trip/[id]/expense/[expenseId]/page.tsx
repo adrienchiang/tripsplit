@@ -1,6 +1,7 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Trash2, Edit3 } from 'lucide-react';
 import { useTripStore } from '@/lib/store';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -46,9 +47,14 @@ export default function ExpenseDetailPage() {
         back
         backHref={`/trip/${tripId}`}
         right={
-          <button onClick={handleDelete} className="p-2 rounded-xl hover:bg-red-900/30 text-red-400 transition-colors">
-            <Trash2 className="w-5 h-5" />
-          </button>
+          <div className="flex items-center gap-1">
+            <Link href={`/trip/${tripId}/expense/${expenseId}/edit`} className="p-2 rounded-xl hover:bg-charcoal-800 text-charcoal-300 transition-colors">
+              <Edit3 className="w-5 h-5" />
+            </Link>
+            <button onClick={handleDelete} className="p-2 rounded-xl hover:bg-red-900/30 text-red-400 transition-colors">
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </div>
         }
       />
 

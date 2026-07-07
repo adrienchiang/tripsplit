@@ -14,8 +14,8 @@ const members = names.map((name, i) => ({
 const [chiang, kwan, pan, bon, henry, hin, chiMan, geoff] = members;
 
 const exchangeRates: Record<string, number> = {
-  THB_HKD: 0.215,
-  HKD_THB: 4.65,
+  THB_HKD: 0.228,
+  HKD_THB: 4.38,
   USD_HKD: 7.82,
   HKD_USD: 0.128,
   JPY_HKD: 0.051,

@@ -8,23 +8,26 @@ import { PageHeader } from '@/components/ui/PageHeader';
 import { Avatar } from '@/components/ui/Avatar';
 import { CurrencyCode, ExpenseCategory, SplitMode, CATEGORY_LABELS, CATEGORY_ICONS, CURRENCY_LABELS, CURRENCY_SYMBOLS } from '@/lib/types';
 import { buildSplits, round2 } from '@/lib/calculations';
-import { getExchangeRate, getTodayISO, formatAmount, cn } from '@/lib/utils';
+import { getExchangeRate, formatAmount, cn } from '@/lib/utils';
 
 const CATEGORIES: ExpenseCategory[] = ['accommodation', 'transport', 'food', 'activities', 'shopping', 'others'];
 
-export default function NewExpensePage() {
+export default function EditExpensePage() {
   const params = useParams();
   const router = useRouter();
   const tripId = params.id as string;
+  const expenseId = params.expenseId as string;
   const trip = useTripStore((s) => s.getTripById(tripId));
-  const addExpense = useTripStore((s) => s.addExpense);
+  const updateExpense = useTripStore((s) => s.updateExpense);
+
+  const expense = trip?.expenses.find((e) => e.id === expenseId);
 
   const [name, setName] = useState('');
   const [originalAmount, setOriginalAmount] = useState('');
   const [currency, setCurrency] = useState<CurrencyCode>('THB');
-  const [exchangeRate, setExchangeRate] = useState(0.228);
+  const [exchangeRate, setExchangeRate] = useState(1);
   const [paidBy, setPaidBy] = useState('');
-  const [date, setDate] = useState(getTodayISO());
+  const [date, setDate] = useState('');
   const [category, setCategory] = useState<ExpenseCategory>('food');
   const [participants, setParticipants] = useState<string[]>([]);
   const [splitMode, setSplitMode] = useState<SplitMode>('equal');
@@ -34,14 +37,33 @@ export default function NewExpensePage() {
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
 
+  // Pre-populate from existing expense
   useEffect(() => {
-    if (trip) {
-      setParticipants(trip.members.map((m) => m.id));
-      setPaidBy(trip.members[0]?.id ?? '');
-      setCurrency(trip.commonCurrencies[1] ?? 'THB');
+    if (expense) {
+      setName(expense.name);
+      setOriginalAmount(expense.originalAmount.toString());
+      setCurrency(expense.originalCurrency);
+      setExchangeRate(expense.exchangeRate);
+      setPaidBy(expense.paidBy);
+      setDate(expense.date);
+      setCategory(expense.category);
+      setParticipants(expense.participants);
+      setSplitMode(expense.splitMode);
+      setNotes(expense.notes ?? '');
+      if (expense.splitMode === 'custom_amount') {
+        const amounts: Record<string, string> = {};
+        expense.splits.forEach((s) => { amounts[s.memberId] = s.amount.toString(); });
+        setCustomAmounts(amounts);
+      }
+      if (expense.splitMode === 'custom_percentage') {
+        const pcts: Record<string, string> = {};
+        expense.splits.forEach((s) => { if (s.percentage != null) pcts[s.memberId] = s.percentage.toString(); });
+        setCustomPercentages(pcts);
+      }
     }
-  }, [trip]);
+  }, [expense]);
 
+  // Update exchange rate when currency changes
   useEffect(() => {
     if (trip && currency !== trip.settlementCurrency) {
       const rate = getExchangeRate(trip.exchangeRates, currency, trip.settlementCurrency);
@@ -51,10 +73,11 @@ export default function NewExpensePage() {
     }
   }, [currency, trip]);
 
-  if (!trip) return null;
+  if (!trip || !expense) return null;
 
   const amount = parseFloat(originalAmount) || 0;
   const settlementAmount = round2(amount * exchangeRate);
+  const settleCurrency = trip.settlementCurrency;
 
   const toggleParticipant = (id: string) => {
     setParticipants((prev) =>
@@ -74,7 +97,7 @@ export default function NewExpensePage() {
 
     const splits = buildSplits(splitMode, settlementAmount, participants, customAmountsNum, customPctNum);
 
-    addExpense(tripId, {
+    updateExpense(tripId, expenseId, {
       name: name.trim(),
       originalAmount: amount,
       originalCurrency: currency,
@@ -88,15 +111,14 @@ export default function NewExpensePage() {
       splits,
       notes: notes.trim(),
     });
-    router.push(`/trip/${tripId}`);
+    router.push(`/trip/${tripId}/expense/${expenseId}`);
   };
 
   const isValid = name.trim() && amount > 0 && paidBy && participants.length > 0;
-  const settleCurrency = trip.settlementCurrency;
 
   return (
     <div className="page-container">
-      <PageHeader title="新增支出" back backHref={`/trip/${tripId}`} />
+      <PageHeader title="編輯支出" back backHref={`/trip/${tripId}/expense/${expenseId}`} />
 
       <div className="space-y-4">
         {/* Name & Amount */}
@@ -112,7 +134,6 @@ export default function NewExpensePage() {
             />
           </div>
 
-          {/* Amount + Currency */}
           <div>
             <label className="text-xs text-charcoal-400 mb-1.5 block">金額 *</label>
             <div className="flex gap-2">
@@ -163,7 +184,6 @@ export default function NewExpensePage() {
             )}
           </div>
 
-          {/* Date & Category */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-charcoal-400 mb-1.5 block">日期</label>
@@ -189,7 +209,6 @@ export default function NewExpensePage() {
             </div>
           </div>
 
-          {/* Notes */}
           <div>
             <label className="text-xs text-charcoal-400 mb-1.5 block">備註</label>
             <input
@@ -226,19 +245,9 @@ export default function NewExpensePage() {
           <div className="flex items-center justify-between mb-3">
             <p className="section-title">分賬成員</p>
             <div className="flex gap-2">
-              <button
-                onClick={() => setParticipants(trip.members.map((m) => m.id))}
-                className="text-xs text-navy-400"
-              >
-                全選
-              </button>
+              <button onClick={() => setParticipants(trip.members.map((m) => m.id))} className="text-xs text-navy-400">全選</button>
               <span className="text-charcoal-700">·</span>
-              <button
-                onClick={() => setParticipants([])}
-                className="text-xs text-charcoal-500"
-              >
-                清除
-              </button>
+              <button onClick={() => setParticipants([])} className="text-xs text-charcoal-500">清除</button>
             </div>
           </div>
           <div className="grid grid-cols-4 gap-2">
@@ -283,9 +292,7 @@ export default function NewExpensePage() {
                   onClick={() => setSplitMode(value)}
                   className={cn(
                     'py-2 rounded-xl text-xs font-medium transition-colors',
-                    splitMode === value
-                      ? 'bg-navy-600 text-white'
-                      : 'bg-charcoal-800 text-charcoal-300 hover:bg-charcoal-700'
+                    splitMode === value ? 'bg-navy-600 text-white' : 'bg-charcoal-800 text-charcoal-300 hover:bg-charcoal-700'
                   )}
                 >
                   {label}
@@ -293,7 +300,6 @@ export default function NewExpensePage() {
               ))}
             </div>
 
-            {/* Equal split preview */}
             {splitMode === 'equal' && settlementAmount > 0 && (
               <div className="bg-charcoal-800 rounded-xl p-3">
                 <p className="text-xs text-charcoal-400 mb-2">每人負擔</p>
@@ -308,9 +314,7 @@ export default function NewExpensePage() {
                           <Avatar initials={m.initials} color={m.color} size="sm" />
                           <span className="text-sm text-white">{m.name}</span>
                         </div>
-                        <span className="text-sm font-medium text-white">
-                          {formatAmount(share, settleCurrency)}
-                        </span>
+                        <span className="text-sm font-medium text-white">{formatAmount(share, settleCurrency)}</span>
                       </div>
                     );
                   })}
@@ -318,7 +322,6 @@ export default function NewExpensePage() {
               </div>
             )}
 
-            {/* Custom amount inputs */}
             {splitMode === 'custom_amount' && (
               <div className="space-y-2">
                 {participants.map((id) => {
@@ -344,7 +347,6 @@ export default function NewExpensePage() {
               </div>
             )}
 
-            {/* Custom percentage inputs */}
             {splitMode === 'custom_percentage' && (
               <div className="space-y-2">
                 {participants.map((id) => {
@@ -360,9 +362,7 @@ export default function NewExpensePage() {
                           className="bg-charcoal-800 border border-charcoal-600 rounded-lg px-2 py-1.5 text-sm text-white w-20 text-right focus:outline-none focus:border-navy-400"
                           placeholder="0"
                           value={customPercentages[id] ?? ''}
-                          onChange={(e) =>
-                            setCustomPercentages((prev) => ({ ...prev, [id]: e.target.value }))
-                          }
+                          onChange={(e) => setCustomPercentages((prev) => ({ ...prev, [id]: e.target.value }))}
                         />
                         <span className="text-xs text-charcoal-500">%</span>
                       </div>
@@ -379,17 +379,14 @@ export default function NewExpensePage() {
           disabled={!isValid}
           className="btn-primary w-full py-4 text-base font-bold disabled:opacity-40"
         >
-          新增支出
+          儲存更改
         </button>
       </div>
 
       {/* Currency Picker Modal */}
       {showCurrencyPicker && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end" onClick={() => setShowCurrencyPicker(false)}>
-          <div
-            className="bg-charcoal-900 rounded-t-2xl w-full p-5 pb-10 max-w-md mx-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="bg-charcoal-900 rounded-t-2xl w-full p-5 pb-10 max-w-md mx-auto" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-base font-bold text-white mb-4">選擇貨幣</h3>
             <div className="space-y-2">
               {trip.commonCurrencies.map((c) => (
@@ -413,10 +410,7 @@ export default function NewExpensePage() {
       {/* Category Picker Modal */}
       {showCategoryPicker && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-end" onClick={() => setShowCategoryPicker(false)}>
-          <div
-            className="bg-charcoal-900 rounded-t-2xl w-full p-5 pb-10 max-w-md mx-auto"
-            onClick={(e) => e.stopPropagation()}
-          >
+          <div className="bg-charcoal-900 rounded-t-2xl w-full p-5 pb-10 max-w-md mx-auto" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-base font-bold text-white mb-4">選擇分類</h3>
             <div className="grid grid-cols-2 gap-2">
               {CATEGORIES.map((c) => (
