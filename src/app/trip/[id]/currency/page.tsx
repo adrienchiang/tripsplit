@@ -6,26 +6,59 @@ import { RefreshCw, Info } from 'lucide-react';
 import { useTripStore } from '@/lib/store';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { CurrencyCode, CURRENCY_LABELS, CURRENCY_SYMBOLS } from '@/lib/types';
-import { getExchangeRate } from '@/lib/utils';
+import { getExchangeRate, cn } from '@/lib/utils';
 
 export default function CurrencyPage() {
   const params = useParams();
   const tripId = params.id as string;
   const trip = useTripStore((s) => s.getTripById(tripId));
   const updateExchangeRate = useTripStore((s) => s.updateExchangeRate);
+  const applyLiveRates = useTripStore((s) => s.applyLiveRates);
+  const setAutoRates = useTripStore((s) => s.setAutoRates);
   const [saved, setSaved] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMsg, setRefreshMsg] = useState('');
 
   if (!trip) return null;
 
   const settle = trip.settlementCurrency;
   const otherCurrencies = trip.commonCurrencies.filter((c) => c !== settle);
+  const autoOn = trip.exchangeRates._auto !== 0;
+  const updatedAt = trip.exchangeRates._updatedAt;
+  const isFinished = trip.endDate < new Date().toLocaleDateString('en-CA');
 
   const handleRateChange = (from: CurrencyCode, value: string) => {
     const rate = parseFloat(value);
-    if (!isNaN(rate) && rate > 0) {
+    const current = getExchangeRate(trip.exchangeRates, from, settle);
+    if (!isNaN(rate) && rate > 0 && Math.abs(rate - current) > 1e-9) {
       updateExchangeRate(tripId, from, settle, rate);
       setSaved(true);
       setTimeout(() => setSaved(false), 1500);
+    }
+  };
+
+  const refreshNow = async () => {
+    setRefreshing(true);
+    setRefreshMsg('');
+    try {
+      const res = await fetch('/api/rates');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      applyLiveRates(tripId, data.rates, data.asOf);
+      setRefreshMsg('已更新至最新匯率');
+    } catch {
+      setRefreshMsg('暫時無法取得最新匯率，請稍後再試');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const toggleAuto = () => {
+    if (autoOn) {
+      setAutoRates(tripId, false);
+    } else {
+      setAutoRates(tripId, true);
+      refreshNow();
     }
   };
 
@@ -81,6 +114,7 @@ export default function CurrencyPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <input
+                      key={`${from}-${rate}`}
                       type="number"
                       step="0.001"
                       defaultValue={rate}
@@ -98,15 +132,53 @@ export default function CurrencyPage() {
           </div>
         </div>
 
-        {/* API placeholder */}
-        <div className="card p-4 border-dashed border-charcoal-600">
-          <div className="flex items-center gap-2 mb-2">
-            <RefreshCw className="w-4 h-4 text-charcoal-500" />
-            <p className="text-sm font-medium text-charcoal-400">即時匯率 API</p>
-            <span className="text-xs bg-charcoal-800 text-charcoal-500 px-2 py-0.5 rounded">即將推出</span>
+        {/* Auto update */}
+        <div className="card p-4 space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-white">每日自動更新匯率</p>
+              <p className="text-xs text-charcoal-500 mt-0.5">
+                每日更新未結束旅行嘅匯率。手動修改匯率會暫停自動更新。
+              </p>
+            </div>
+            <button
+              onClick={toggleAuto}
+              aria-pressed={autoOn}
+              className={cn('relative w-11 h-6 rounded-full transition-colors shrink-0', autoOn ? 'bg-military-600' : 'bg-charcoal-700')}
+            >
+              <span
+                className={cn(
+                  'absolute top-0.5 w-5 h-5 bg-white rounded-full transition-all',
+                  autoOn ? 'left-[1.375rem]' : 'left-0.5'
+                )}
+              />
+            </button>
           </div>
-          <p className="text-xs text-charcoal-600">
-            日後可接駁 Open Exchange Rates 或 Fixer.io，自動獲取最新匯率。
+          {isFinished && (
+            <p className="text-xs text-charcoal-500">此旅行已結束，每日自動更新唔會再套用。</p>
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-charcoal-500">
+              {typeof updatedAt === 'number'
+                ? `匯率日期：${new Date(updatedAt).toLocaleDateString('zh-HK')}`
+                : '尚未自動更新'}
+            </p>
+            <button
+              onClick={refreshNow}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 text-xs text-navy-300 disabled:opacity-50"
+            >
+              <RefreshCw className={cn('w-3.5 h-3.5', refreshing && 'animate-spin')} />
+              立即更新
+            </button>
+          </div>
+          {refreshMsg && <p className="text-xs text-charcoal-400">{refreshMsg}</p>}
+          <p className="text-[10px] text-charcoal-600">
+            匯率資料來源：
+            <a href="https://www.exchangerate-api.com" target="_blank" rel="noopener noreferrer" className="underline">
+              ExchangeRate-API
+            </a>
+            （備用：歐洲央行）。為市場參考匯率，實際兌換率可能不同。
           </p>
         </div>
 

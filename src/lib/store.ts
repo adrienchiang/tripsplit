@@ -35,6 +35,8 @@ interface TripStore {
 
   // Currency actions
   updateExchangeRate: (tripId: string, from: CurrencyCode, to: CurrencyCode, rate: number) => void;
+  applyLiveRates: (tripId: string, rates: Record<string, number>, asOf: number) => void;
+  setAutoRates: (tripId: string, on: boolean) => void;
 
   // Settlement actions
   refreshSettlements: (tripId: string) => void;
@@ -208,7 +210,28 @@ export const useTripStore = create<TripStore>()((set, get) => ({
       ...get().getTripById(tripId)?.exchangeRates,
       [`${from}_${to}`]: rate,
       [`${to}_${from}`]: Math.round((1 / rate) * 10000) / 10000,
+      _auto: 0,
     };
+    set((s) => ({
+      trips: s.trips.map((t) =>
+        t.id === tripId ? { ...t, exchangeRates: newRates } : t
+      ),
+    }));
+    db.updateTripInDB(tripId, { exchangeRates: newRates }).catch(console.error);
+  },
+
+  applyLiveRates: (tripId, rates, asOf) => {
+    const newRates = { ...get().getTripById(tripId)?.exchangeRates, ...rates, _updatedAt: asOf };
+    set((s) => ({
+      trips: s.trips.map((t) =>
+        t.id === tripId ? { ...t, exchangeRates: newRates } : t
+      ),
+    }));
+    db.updateTripInDB(tripId, { exchangeRates: newRates }).catch(console.error);
+  },
+
+  setAutoRates: (tripId, on) => {
+    const newRates = { ...get().getTripById(tripId)?.exchangeRates, _auto: on ? 1 : 0 };
     set((s) => ({
       trips: s.trips.map((t) =>
         t.id === tripId ? { ...t, exchangeRates: newRates } : t

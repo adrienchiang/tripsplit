@@ -26,6 +26,7 @@ export default function CreateTripPage() {
   const [commonCurrencies, setCommonCurrencies] = useState<CurrencyCode[]>(['HKD', 'THB']);
   const [memberName, setMemberName] = useState('');
   const [members, setMembers] = useState<{ id: string; name: string; initials: string; color: string }[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
   const addMember = () => {
     const trimmed = memberName.trim();
@@ -48,8 +49,19 @@ export default function CreateTripPage() {
     );
   };
 
-  const handleSubmit = () => {
-    if (!name.trim() || !destination.trim() || !startDate || !endDate || members.length === 0) return;
+  const handleSubmit = async () => {
+    if (submitting || !name.trim() || !destination.trim() || !startDate || !endDate || members.length === 0) return;
+    setSubmitting(true);
+    let exchangeRates: Record<string, number> = DEFAULT_EXCHANGE_RATES;
+    try {
+      const res = await fetch('/api/rates', { signal: AbortSignal.timeout(4000) });
+      if (res.ok) {
+        const live = await res.json();
+        exchangeRates = { ...DEFAULT_EXCHANGE_RATES, ...live.rates, _updatedAt: live.asOf };
+      }
+    } catch {
+      // keep the built-in default rates
+    }
     const id = createTrip({
       name: name.trim(),
       destination: destination.trim(),
@@ -59,7 +71,7 @@ export default function CreateTripPage() {
       members,
       settlementCurrency,
       commonCurrencies,
-      exchangeRates: DEFAULT_EXCHANGE_RATES,
+      exchangeRates,
     });
     router.push(`/trip/${id}`);
   };
@@ -217,7 +229,7 @@ export default function CreateTripPage() {
         {/* Submit */}
         <button
           onClick={handleSubmit}
-          disabled={!isValid}
+          disabled={!isValid || submitting}
           className="btn-primary w-full py-4 text-base font-bold disabled:opacity-40"
         >
           建立旅行
