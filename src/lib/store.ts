@@ -37,6 +37,7 @@ interface TripStore {
   updateExchangeRate: (tripId: string, from: CurrencyCode, to: CurrencyCode, rate: number) => void;
   applyLiveRates: (tripId: string, rates: Record<string, number>, asOf: number) => void;
   setAutoRates: (tripId: string, on: boolean) => void;
+  addCurrency: (tripId: string, code: CurrencyCode, rates: Record<string, number>) => void;
 
   // Settlement actions
   refreshSettlements: (tripId: string) => void;
@@ -238,6 +239,22 @@ export const useTripStore = create<TripStore>()((set, get) => ({
       ),
     }));
     db.updateTripInDB(tripId, { exchangeRates: newRates }).catch(console.error);
+  },
+
+  addCurrency: (tripId, code, rates) => {
+    const trip = get().getTripById(tripId);
+    if (!trip || trip.commonCurrencies.includes(code)) return;
+    const commonCurrencies = [...trip.commonCurrencies, code];
+    const relevant = Object.fromEntries(
+      Object.entries(rates).filter(([key]) => key.startsWith(`${code}_`) || key.endsWith(`_${code}`))
+    );
+    const newRates = { ...trip.exchangeRates, ...relevant };
+    set((s) => ({
+      trips: s.trips.map((t) =>
+        t.id === tripId ? { ...t, commonCurrencies, exchangeRates: newRates } : t
+      ),
+    }));
+    db.updateTripInDB(tripId, { commonCurrencies, exchangeRates: newRates }).catch(console.error);
   },
 
   // ── Settlement actions ───────────────────────────────────────────

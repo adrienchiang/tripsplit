@@ -11,7 +11,7 @@ import { getInitials } from '@/lib/utils';
 import { DEFAULT_EXCHANGE_RATES } from '@/lib/mockData';
 import { Avatar } from '@/components/ui/Avatar';
 
-const ALL_CURRENCIES: CurrencyCode[] = ['HKD', 'THB', 'USD', 'JPY', 'EUR', 'CNY'];
+const ALL_CURRENCIES: CurrencyCode[] = ['HKD', 'THB', 'USD', 'JPY', 'EUR', 'CNY', 'KRW'];
 
 export default function CreateTripPage() {
   const router = useRouter();

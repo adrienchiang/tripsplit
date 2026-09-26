@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CurrencyCode, ExpenseCategory } from '@/lib/types';
 
 const GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-3.1-flash-lite';
-const CURRENCIES: CurrencyCode[] = ['HKD', 'THB', 'USD', 'JPY', 'EUR', 'CNY'];
+const CURRENCIES: CurrencyCode[] = ['HKD', 'THB', 'USD', 'JPY', 'EUR', 'CNY', 'KRW'];
 const CATEGORIES: ExpenseCategory[] = ['accommodation', 'transport', 'food', 'activities', 'shopping', 'others'];
 
 interface MemberInput {

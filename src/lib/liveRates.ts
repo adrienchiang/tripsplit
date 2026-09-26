@@ -1,6 +1,6 @@
 import { CurrencyCode } from './types';
 
-export const RATE_CURRENCIES: CurrencyCode[] = ['HKD', 'THB', 'USD', 'JPY', 'EUR', 'CNY'];
+export const RATE_CURRENCIES: CurrencyCode[] = ['HKD', 'THB', 'USD', 'JPY', 'EUR', 'CNY', 'KRW'];
 
 export interface LiveRates {
   rates: Record<string, number>;
@@ -23,7 +23,7 @@ async function fetchPerUsd(): Promise<{ perUsd: Record<string, number>; asOf: nu
   } catch {
     // fall through to the backup provider
   }
-  const d = await getJson('https://api.frankfurter.dev/v1/latest?base=USD&symbols=HKD,THB,JPY,EUR,CNY');
+  const d = await getJson('https://api.frankfurter.dev/v1/latest?base=USD&symbols=HKD,THB,JPY,EUR,CNY,KRW');
   return { perUsd: { USD: 1, ...d.rates }, asOf: new Date(d.date).getTime(), source: 'Frankfurter (ECB)' };
 }
 

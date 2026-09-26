@@ -11,7 +11,7 @@ import { getExchangeRate, getTodayISO, formatAmount, cn } from '@/lib/utils';
 type Stage = 'idle' | 'recording' | 'processing' | 'confirm' | 'error';
 
 const CATEGORIES: ExpenseCategory[] = ['accommodation', 'transport', 'food', 'activities', 'shopping', 'others'];
-const CURRENCIES: CurrencyCode[] = ['HKD', 'THB', 'USD', 'JPY', 'EUR', 'CNY'];
+const CURRENCIES: CurrencyCode[] = ['HKD', 'THB', 'USD', 'JPY', 'EUR', 'CNY', 'KRW'];
 
 // Gemini invents an expense when given silence, so require audible sound before calling the API.
 const VOICE_RMS_THRESHOLD = 0.02;

@@ -1,4 +1,4 @@
-export type CurrencyCode = 'HKD' | 'THB' | 'USD' | 'JPY' | 'EUR' | 'CNY';
+export type CurrencyCode = 'HKD' | 'THB' | 'USD' | 'JPY' | 'EUR' | 'CNY' | 'KRW';
 
 export type ExpenseCategory =
   | 'accommodation'
@@ -115,6 +115,7 @@ export const CURRENCY_LABELS: Record<CurrencyCode, string> = {
   JPY: '日圓 JPY',
   EUR: '歐元 EUR',
   CNY: '人民幣 CNY',
+  KRW: '韓圜 KRW',
 };
 
 export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
@@ -124,6 +125,7 @@ export const CURRENCY_SYMBOLS: Record<CurrencyCode, string> = {
   JPY: '¥',
   EUR: '€',
   CNY: '¥',
+  KRW: '₩',
 };
 
 export const MEMBER_COLORS = [

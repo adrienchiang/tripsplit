@@ -7,6 +7,7 @@ import { useTripStore } from '@/lib/store';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { CurrencyCode, CURRENCY_LABELS, CURRENCY_SYMBOLS } from '@/lib/types';
 import { getExchangeRate, cn } from '@/lib/utils';
+import { RATE_CURRENCIES } from '@/lib/liveRates';
 
 export default function CurrencyPage() {
   const params = useParams();
@@ -15,9 +16,12 @@ export default function CurrencyPage() {
   const updateExchangeRate = useTripStore((s) => s.updateExchangeRate);
   const applyLiveRates = useTripStore((s) => s.applyLiveRates);
   const setAutoRates = useTripStore((s) => s.setAutoRates);
+  const addCurrency = useTripStore((s) => s.addCurrency);
   const [saved, setSaved] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [refreshMsg, setRefreshMsg] = useState('');
+  const [adding, setAdding] = useState<CurrencyCode | null>(null);
+  const [addMsg, setAddMsg] = useState('');
 
   if (!trip) return null;
 
@@ -26,6 +30,7 @@ export default function CurrencyPage() {
   const autoOn = trip.exchangeRates._auto !== 0;
   const updatedAt = trip.exchangeRates._updatedAt;
   const isFinished = trip.endDate < new Date().toLocaleDateString('en-CA');
+  const addable = RATE_CURRENCIES.filter((c) => c !== settle && !trip.commonCurrencies.includes(c));
 
   const handleRateChange = (from: CurrencyCode, value: string) => {
     const rate = parseFloat(value);
@@ -59,6 +64,22 @@ export default function CurrencyPage() {
     } else {
       setAutoRates(tripId, true);
       refreshNow();
+    }
+  };
+
+  const handleAddCurrency = async (code: CurrencyCode) => {
+    setAdding(code);
+    setAddMsg('');
+    try {
+      const res = await fetch('/api/rates');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      addCurrency(tripId, code, data.rates);
+      setAddMsg(`已新增 ${code}，並套用最新匯率`);
+    } catch {
+      setAddMsg(`暫時無法取得 ${code} 匯率，未有新增，請稍後再試`);
+    } finally {
+      setAdding(null);
     }
   };
 
@@ -131,6 +152,27 @@ export default function CurrencyPage() {
             })}
           </div>
         </div>
+
+        {/* Add currency */}
+        {(addable.length > 0 || addMsg) && (
+          <div className="card p-4">
+            <p className="section-title mb-1">新增外幣</p>
+            <p className="text-xs text-charcoal-500 mb-3">新增後，記賬時就可以揀呢隻貨幣，並會套用最新市場匯率。</p>
+            <div className="flex flex-wrap gap-2">
+              {addable.map((code) => (
+                <button
+                  key={code}
+                  onClick={() => handleAddCurrency(code)}
+                  disabled={adding !== null}
+                  className="bg-charcoal-800 hover:bg-charcoal-700 text-sm text-white px-3 py-2 rounded-xl disabled:opacity-50"
+                >
+                  {adding === code ? '新增中…' : `＋ ${CURRENCY_LABELS[code]}`}
+                </button>
+              ))}
+            </div>
+            {addMsg && <p className="text-xs text-charcoal-400 mt-2">{addMsg}</p>}
+          </div>
+        )}
 
         {/* Auto update */}
         <div className="card p-4 space-y-3">

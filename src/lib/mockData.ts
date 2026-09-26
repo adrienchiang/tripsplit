@@ -24,6 +24,8 @@ const exchangeRates: Record<string, number> = {
   HKD_EUR: 0.118,
   CNY_HKD: 1.07,
   HKD_CNY: 0.935,
+  KRW_HKD: 0.005779,
+  HKD_KRW: 173.04,
 };
 
 function makeExpense(
