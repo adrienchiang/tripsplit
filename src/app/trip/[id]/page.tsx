@@ -10,6 +10,7 @@ import { CATEGORY_LABELS, CATEGORY_ICONS, CATEGORY_COLORS, ExpenseCategory } fro
 import { Avatar } from '@/components/ui/Avatar';
 import { CategoryBadge } from '@/components/ui/CategoryBadge';
 import { StatCard } from '@/components/ui/StatCard';
+import { VoiceExpenseButton } from '@/components/VoiceExpenseButton';
 
 export default function TripDashboard() {
   const params = useParams();
@@ -225,6 +226,9 @@ export default function TripDashboard() {
           </div>
         )}
       </div>
+
+      {/* FAB - Voice input */}
+      <VoiceExpenseButton trip={trip} />
 
       {/* FAB - Add expense */}
       <Link
