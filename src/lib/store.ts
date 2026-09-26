@@ -243,8 +243,8 @@ export const useTripStore = create<TripStore>()((set, get) => ({
 
   addCurrency: (tripId, code, rates) => {
     const trip = get().getTripById(tripId);
-    if (!trip || trip.commonCurrencies.includes(code)) return;
-    const commonCurrencies = [...trip.commonCurrencies, code];
+    if (!trip) return;
+    const commonCurrencies = trip.commonCurrencies.includes(code) ? trip.commonCurrencies : [...trip.commonCurrencies, code];
     const relevant = Object.fromEntries(
       Object.entries(rates).filter(([key]) => key.startsWith(`${code}_`) || key.endsWith(`_${code}`))
     );

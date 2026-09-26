@@ -1,12 +1,12 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Mic, Square, Loader2, AlertCircle, Check, ChevronDown } from 'lucide-react';
 import { useTripStore } from '@/lib/store';
 import { Avatar } from '@/components/ui/Avatar';
 import { Trip, CurrencyCode, ExpenseCategory, CATEGORY_LABELS, CATEGORY_ICONS, CURRENCY_LABELS, CURRENCY_SYMBOLS } from '@/lib/types';
 import { buildSplits, round2 } from '@/lib/calculations';
-import { getExchangeRate, getTodayISO, formatAmount, cn } from '@/lib/utils';
+import { getTodayISO, formatAmount, cn } from '@/lib/utils';
 
 type Stage = 'idle' | 'recording' | 'processing' | 'confirm' | 'error';
 
@@ -45,11 +45,14 @@ function blobToBase64(blob: Blob): Promise<string> {
 
 export function VoiceExpenseButton({ trip }: VoiceExpenseButtonProps) {
   const addExpense = useTripStore((s) => s.addExpense);
+  const addCurrency = useTripStore((s) => s.addCurrency);
   const [stage, setStage] = useState<Stage>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [draft, setDraft] = useState<VoiceDraft | null>(null);
   const [showCurrencyPicker, setShowCurrencyPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+  const [liveRates, setLiveRates] = useState<Record<string, number> | null>(null);
+  const [rateStatus, setRateStatus] = useState<'idle' | 'loading' | 'failed'>('idle');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -57,6 +60,36 @@ export function VoiceExpenseButton({ trip }: VoiceExpenseButtonProps) {
   const audioCtxRef = useRef<AudioContext | null>(null);
   const levelTimerRef = useRef<number | null>(null);
   const voicedFramesRef = useRef(0);
+
+  const settle = trip.settlementCurrency;
+  const tripRate = (cur: CurrencyCode) => trip.exchangeRates[`${cur}_${settle}`];
+  const tripHasRate = (cur: CurrencyCode) => cur === settle || tripRate(cur) > 0;
+  const effectiveRate = (cur: CurrencyCode): number | null => {
+    if (cur === settle) return 1;
+    if (tripRate(cur) > 0) return tripRate(cur);
+    const live = liveRates?.[`${cur}_${settle}`] ?? 0;
+    return live > 0 ? live : null;
+  };
+
+  const fetchLiveRates = async () => {
+    setRateStatus('loading');
+    try {
+      const res = await fetch('/api/rates');
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setLiveRates(data.rates);
+      setRateStatus('idle');
+    } catch {
+      setRateStatus('failed');
+    }
+  };
+
+  // A trip without a rate for the spoken currency would silently convert at 1, so get today's market rate.
+  useEffect(() => {
+    if (stage === 'confirm' && draft && !tripHasRate(draft.currency) && !liveRates && rateStatus === 'idle') {
+      fetchLiveRates();
+    }
+  }, [stage, draft?.currency, liveRates, rateStatus]);
 
   const open = () => setStage('recording');
 
@@ -164,6 +197,7 @@ export function VoiceExpenseButton({ trip }: VoiceExpenseButtonProps) {
     setStage('idle');
     setDraft(null);
     setErrorMsg('');
+    setRateStatus('idle');
   };
 
   const toggleParticipant = (id: string) => {
@@ -179,7 +213,9 @@ export function VoiceExpenseButton({ trip }: VoiceExpenseButtonProps) {
   const handleConfirm = () => {
     if (!draft || !draft.name.trim() || draft.amount <= 0 || !draft.payerId || draft.participantIds.length === 0) return;
 
-    const exchangeRate = getExchangeRate(trip.exchangeRates, draft.currency, trip.settlementCurrency);
+    const exchangeRate = effectiveRate(draft.currency);
+    if (exchangeRate === null) return;
+    if (!tripHasRate(draft.currency) && liveRates) addCurrency(trip.id, draft.currency, liveRates);
     const settlementAmount = round2(draft.amount * exchangeRate);
     const splits = buildSplits('equal', settlementAmount, draft.participantIds);
 
@@ -200,7 +236,9 @@ export function VoiceExpenseButton({ trip }: VoiceExpenseButtonProps) {
     close();
   };
 
-  const isValid = draft && draft.name.trim() && draft.amount > 0 && draft.payerId && draft.participantIds.length > 0;
+  const rate = draft ? effectiveRate(draft.currency) : null;
+  const totalSettle = draft && rate !== null ? round2(draft.amount * rate) : 0;
+  const isValid = draft && rate !== null && draft.name.trim() && draft.amount > 0 && draft.payerId && draft.participantIds.length > 0;
 
   return (
     <>
@@ -351,14 +389,30 @@ export function VoiceExpenseButton({ trip }: VoiceExpenseButtonProps) {
                   </div>
                 </div>
 
-                {draft.amount > 0 && draft.participantIds.length > 0 && (
-                  <div className="bg-charcoal-800 rounded-xl p-3 text-xs text-charcoal-400">
-                    每人約 {formatAmount(
-                      round2(
-                        round2(draft.amount * getExchangeRate(trip.exchangeRates, draft.currency, trip.settlementCurrency)) /
-                          draft.participantIds.length
-                      ),
-                      trip.settlementCurrency
+                {draft.amount > 0 && (
+                  <div className="bg-charcoal-800 rounded-xl p-3 text-xs text-charcoal-400 space-y-1">
+                    {draft.currency !== settle &&
+                      (rate !== null ? (
+                        <p>
+                          匯率 1 {draft.currency} = {rate} {settle}，換算 {formatAmount(totalSettle, settle)}
+                        </p>
+                      ) : rateStatus === 'failed' ? (
+                        <p className="text-red-400">
+                          暫時無法取得 {draft.currency} 匯率，
+                          <button onClick={fetchLiveRates} className="underline">
+                            重試
+                          </button>
+                        </p>
+                      ) : (
+                        <p>正在取得 {draft.currency} 匯率…</p>
+                      ))}
+                    {!tripHasRate(draft.currency) && rate !== null && (
+                      <p className="text-sand-400">
+                        此旅行未有 {draft.currency} 匯率，已採用最新市場匯率；確認後會將 {draft.currency} 加入此旅行。
+                      </p>
+                    )}
+                    {rate !== null && draft.participantIds.length > 0 && (
+                      <p>每人約 {formatAmount(round2(totalSettle / draft.participantIds.length), settle)}</p>
                     )}
                   </div>
                 )}
